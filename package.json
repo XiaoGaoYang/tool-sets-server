@@ -1,0 +1,20 @@
+{
+  "name": "tool-sets-server",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "co-body": "^4.2.0",
+    "co-fs": "^1.2.0",
+    "koa": "^1.2.4",
+    "koa-router": "^5.4.0",
+    "koa-send": "^3.2.0",
+    "superagent": "^2.3.0"
+  }
+}
