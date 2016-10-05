@@ -1,80 +1,96 @@
 var cheerio = require('cheerio');
 var superagent = require('superagent');
+// var thunkify = require('thunkify');
 var fs = require('co-fs');
 
 // 查询书籍
 function *queryBook(keyword){
-  
-  var url = 'http://121.248.104.139:8080/opac/search_adv_result.php?sType0=any&q0='+keyword;
-  var queryResult = {
-    pageNumber: 0,
-    bookInfo: {
-      booklist: [],
-      bookId: [],
-      author: [],
-      publiser: [],
-      callNumber: [],
-      type: [],
-    }
-  };
-  var res = yield superagent.get(url);
-  var $ = cheerio.load(res.text);
-  var aBooks = $('#result_content').find('tr');
-  queryResult.pageNumber = $('.numstyle').find('font').eq(1).html();
-  for (var i = 1; i < aBooks.length; i++) {
-    var aTds = aBooks.eq(i).find('td');
-    var oBook = aTds.eq(1).find('a');
-    // 获取书籍详情页地址
-    queryResult.bookInfo.bookId.push(oBook.attr('href').substring(17));
-    // 获取书籍名
-    queryResult.bookInfo.booklist.push(oBook.html());
-    // 获取责任者
-    queryResult.bookInfo.author.push(aTds.eq(2).html());
-    // 获取出版信息
-    queryResult.bookInfo.publiser.push(aTds.eq(3).html());
-    // 获取索书号
-    queryResult.bookInfo.callNumber.push(aTds.eq(4).html());
-    // 获取文献类型
-    queryResult.bookInfo.type.push(aTds.eq(5).html());
-  }
-  return queryResult;
-
   // 本地测试
   /*
-  var data = yield fs.readFile('test.html', 'utf-8');
-  var $ = cheerio.load(data);
+  var data = yield fs.readFile('./test.html', 'utf-8');
+  var $ = cheerio.load(data,{decodeEntities: false});
+  */
+
+  // 实际使用
+  var url = 'http://121.248.104.139:8080/opac/search_adv_result.php?sType0=02&q0='+keyword;
+  var res = yield superagent.get(url)
+    .set('Accept','text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+    .set('Accept-Encoding','gzip, deflate, sdch')
+    .set('Accept-Language','zh-CN,zh;q=0.8')
+    .set('Cache-Control','max-age=0')
+    .set('Connection','keep-alive')
+    .set('Host','121.248.104.139:8080')
+    .set('Referer','http://lib.cumt.edu.cn/')
+    .set('Upgrade-Insecure-Requests','1')
+    .set('User-Agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.89 Safari/537.36');
+  var $ = cheerio.load(res.text,{decodeEntities: false});
+  
   var queryResult = {
-    pageNumber: 0,
-    bookInfo: {
-      booklist: [],
-      bookId: [],
-      author: [],
-      publiser: [],
-      callNumber: [],
-      type: [],
-    }
+    totalPage: 0,
+    currentPage: 0,
+    bookList: [],
   };
+
   var aBooks = $('#result_content').find('tr');
-  queryResult.pageNumber = $('.numstyle').find('font').eq(1).html();
+  // 当前页数
+  queryResult.currentPage = $('.numstyle').find('font').eq(0).html();
+  // 总页数
+  queryResult.totalPage = $('.numstyle').find('font').eq(1).html();
   for (var i = 1; i < aBooks.length; i++) {
+    var bookObj = {};// 存放书籍信息
     var aTds = aBooks.eq(i).find('td');
     var oBook = aTds.eq(1).find('a');
     // 获取书籍详情页地址
-    queryResult.bookInfo.bookId.push(oBook.attr('href').substring(17));
+    bookObj.detail = oBook.attr('href').substring(17);
     // 获取书籍名
-    queryResult.bookInfo.booklist.push(oBook.html());
+    bookObj.name = handleBook(oBook.html());
     // 获取责任者
-    queryResult.bookInfo.author.push(aTds.eq(2).html());
+    bookObj.author = aTds.eq(2).html();
     // 获取出版信息
-    queryResult.bookInfo.publiser.push(aTds.eq(3).html());
+    bookObj.publiser = aTds.eq(3).html();
     // 获取索书号
-    queryResult.bookInfo.callNumber.push(aTds.eq(4).html());
+    bookObj.number = aTds.eq(4).html();
     // 获取文献类型
-    queryResult.bookInfo.type.push(aTds.eq(5).html());
+    bookObj.type = aTds.eq(5).html();
+    // 将书籍信息对象push入书籍列表里
+    queryResult.bookList.push(bookObj);
   }
-  return queryResult;
-  */
+  
+  var arrList = [];
+  for(var i=0;i<queryResult.bookList.length;i++){
+    arrList.push( bookCover(queryResult.bookList[i].name) );
+  }
+  var aImg = yield arrList;// 并发发起arrList.length个请求
+  for(var i=0;i<aImg.length;i++){
+    queryResult.bookList[i].cover = aImg[i];
+  }  
 
+  return queryResult;
+  
 }
 
+// 根据书名从豆瓣爬取图书封面
+function* bookCover(bookName){
+  var url = 'https://book.douban.com/subject_search?search_text='+encodeURI(bookName)+'&cat=1001';  
+  var res = yield superagent.get(url);
+  var $ = cheerio.load(res.text);
+  var arrBooks = $('.article').find('.subject-item');
+  var imgUrl = arrBooks.eq(0).find('.pic').find('img').attr('src');
+  return imgUrl;
+}
+
+// 处理书名，删掉不必要的字符，提高豆瓣搜索准确率
+function handleBook(bookname){
+  var temp = bookname.split('=')[0].trim();
+  if(temp.lastIndexOf('.') === temp.length-1 || temp.lastIndexOf('/') === temp.length-1){
+    temp = temp.substring(0,temp.length-1).trim();
+  }
+  return temp;
+}
+
+/* 头信息
+.set('Host','book.douban.com')
+.set('Upgrade-Insecure-Requests','1')
+.set('User-Agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.89 Safari/537.36')
+*/
 module.exports = queryBook;
