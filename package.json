@@ -1,13 +1,12 @@
 {
   "name": "tool-sets-server",
   "version": "0.1.0",
-  "description": "",
+  "description": "tool-sets项目的服务器端代码",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "XiaoGaoYang",
   "dependencies": {
     "cheerio": "^0.22.0",
     "co-body": "^4.2.0",
@@ -15,6 +14,6 @@
     "koa": "^1.2.4",
     "koa-router": "^5.4.0",
     "koa-send": "^3.2.0",
-    "superagent": "^2.3.0",
+    "superagent": "^2.3.0"
   }
 }

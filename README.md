@@ -32,8 +32,7 @@
     "publiser": "清华大学出版社 2007",
     "number": "TP393.092/Z-919.2",
     "type": "中文图书",
-    "cover": "https://img3.doubanio.com/mpic/s3022312.jpg"
+    "cover": "https://img3.doubanio.com/mpic/s3022312.jpg"  // 当没有查到封面的时候没有该属性
   }]
 }
 ```
-
