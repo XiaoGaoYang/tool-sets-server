@@ -12,7 +12,7 @@
 
 ## API
 
-请求：`POST` `/library`  
+请求：`POST` `http://localhost:3000/tool-sets/book/library`  
 
 接受参数：
 

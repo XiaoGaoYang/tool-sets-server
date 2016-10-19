@@ -1,7 +1,13 @@
 const koa = require('koa');
+const mongoose = require('mongoose');
 
 const routing = require('./routes/');
 const { port,mongodb } = require('./config');
+
+mongoose.Promise = global.Promise;
+mongoose.connect(mongodb);
+mongoose.connection.on('connected',() => console.log('Mongoose default connection open to ' + mongodb));
+mongoose.connection.on('error',(err) => console.log(err) );
 
 const app = new koa();
 
