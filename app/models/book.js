@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const Book = new Schema({
   "name": { type: String, required: true },
   "number": { type: String, required: true },
-  "isbn": { type: String, index: {unique: true} },
+  "isbn": { type: String },
   "detail": { type: String, required: true, index: {unique: true} },
   "place": { type: String },
   "author": { type: String, required: true },

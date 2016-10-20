@@ -15,7 +15,7 @@ exports.index = function*(next){
 exports.library = function*(next) {
   const body = yield parse(this, {limit: '1kb'});
   if (body.keyword) {
-    console.log(body.keyword);
+    console.log('用户搜索关键字为:',body.keyword);
 
     // 根据书名在本地数据查找，然后返回给请求方
     const localResult = yield Book.fuzzyName(body.keyword);
