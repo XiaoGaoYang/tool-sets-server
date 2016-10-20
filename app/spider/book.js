@@ -237,4 +237,13 @@ function* doubanApi(isbn){
   }
 }
 
+// 处理书名，删掉不必要的字符，提高豆瓣搜索准确率
+function handleBook(bookname) {
+  var temp = bookname.split('=')[0].trim();
+  if (temp.lastIndexOf('.') === temp.length - 1 || temp.lastIndexOf('/') === temp.length - 1) {
+    temp = temp.substring(0, temp.length - 1).trim();
+  }
+  return temp;
+}
+
 module.exports = bookSpider;
