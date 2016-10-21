@@ -4,34 +4,68 @@ const fs = require('co-fs');
 const co = require('co');
 
 const Book = require('../models/book');
+const Keyword = require('../models/keyword');
 
 function bookSpider(keyword){
   co(function*(){
-    // 根据关键字搜索图书
+    const kw = yield Keyword.findByKw(keyword);
+    if(kw.status !== 'ready') {console.log('相同请求，忽略');return;};
     
+    kw.status = 'pending';
+    yield kw.save();
+
     let bookList = [];
     bookList = yield queryBook(keyword);
-    console.log('爬取回来的有'+bookList.length+'本');
-    bookList = yield deleteRepeat(bookList);
-    console.log('去重后剩余'+bookList.length+'本书');
-    if(!bookList.length) {
-      console.log('无新图书，爬取结束');
+    console.log('目录页爬取回来有'+bookList.length+'本');
+
+    // 如果跟以前爬取的结果数目是否相同，并且没有错误标记，则直接结束
+    if (kw.number === bookList.length && !kw.haserr) {
+      kw.status = 'ready';
+      yield kw.save();
+      console.log('以前爬过，忽略');
       return;
     }
+
+    // 记录新爬去的结果数目，错误标记为false
+    kw.number = bookList.length;
+    kw.haserr = false;
+    yield kw.save();
+
+    // 去重
+    bookList = yield deleteRepeat(bookList);
+    const len = bookList.length;
+    console.log('去重后剩余'+len+'本书');
+    
+    // 针对新增加的书爬详情页
     bookList = yield queryDetail(bookList);
-    console.log('所有的详情页爬取完成');
+    console.log('详情页爬取回来有'+bookList.length+'本');
+    
+    // 根据详情页结果长度是否与去重后的长度相同判断爬详情页时是否有错误发生
+    if(bookList.length !== len){
+      kw.haserr = true;
+      kw.save();
+    }
+
+    // 爬豆瓣API
     bookList = yield queryDouBan(bookList);
     console.log('豆瓣爬数据完成');
 
     //console.log(bookList);
     // bookList = testData;
+
     // 保存到数据库里
     try{
       yield Book.saves(bookList);
+      kw.status = 'ready';
+      kw.save();
       console.log('保存数据库完成，新增'+bookList.length+'条数据');
     }catch(err){
+      kw.haserr = true;
+      kw.status = 'ready';
+      kw.save();
       console.log('保存到数据库中发生错误，可能是因为数据库中有重复的数据，用户搜索关键字为：',keyword);
     }
+    
   });
 }
 
@@ -136,6 +170,7 @@ function* queryDetail(arr) {
   const max = 2;  // 最多同时并发请求个数
   for(let i=0;i<arr.length;i++){
     reqArr.push(detailRequest(arr[i].detail));
+    // 当达到最大并发请求限制时开始发送请求
     if(reqArr.length === max){
       let res = yield reqArr;
       reqArr = [];
@@ -146,32 +181,44 @@ function* queryDetail(arr) {
   }
 
   if(reqArr.length){
-    res = yield reqArr;
+    let res = yield reqArr;
     for(let j=0;j<reqArr.length;j++){
       resArr.push(res[j]);
     }
   }
 
-  for(let i=0;i<arr.length;i++){
-    Object.assign(arr[i],resArr[i]);
+  for(let i=0;i<resArr.length;i++){
+    if(resArr[i].done){ // 某本书详情页信息爬取成功，合并对象
+      Object.assign(arr[i],resArr[i].info);
+    }else{  // 某本书详情页信息爬取失败，从arr和resArr将该书删除
+      console.log('因为detail为的'+resArr[i].detail+'详情页爬取失败,从上一步爬取结果数组中将该书删除');
+      resArr.splice(i,1);
+      arr.splice(i,1);
+      i--;
+    }
   }
   return arr;
 }
 
 function* detailRequest(detail){
   const url = 'http://121.248.104.139:8080/opac/item.php?marc_no='+detail;
-  const res = yield superagent.get(url)
-    .set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-    .set('Accept-Encoding', 'gzip, deflate, sdch')
-    .set('Accept-Language', 'zh-CN,zh;q=0.8')
-    .set('Cache-Control', 'max-age=0')
-    .set('Connection', 'keep-alive')
-    .set('Cookie','safedog-flow-item=AAA8B70150DF46CDAE4B28D75E197AC7; PHPSESSID=67trl7fsious1cbti66ed46co5')
-    .set('Host', '121.248.104.139:8080')
-    .set('Referer', 'http://lib.cumt.edu.cn/')
-    .set('Upgrade-Insecure-Requests', '1')
-    .set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.89 Safari/537.36');
-
+  let res = '';
+  try{
+    res = yield superagent.get(url)
+      .set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+      .set('Accept-Encoding', 'gzip, deflate, sdch')
+      .set('Accept-Language', 'zh-CN,zh;q=0.8')
+      .set('Cache-Control', 'max-age=0')
+      .set('Connection', 'keep-alive')
+      .set('Cookie','safedog-flow-item=AAA8B70150DF46CDAE4B28D75E197AC7; PHPSESSID=67trl7fsious1cbti66ed46co5')
+      .set('Host', '121.248.104.139:8080')
+      .set('Referer', 'http://lib.cumt.edu.cn/')
+      .set('Upgrade-Insecure-Requests', '1')
+      .set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.89 Safari/537.36');
+  }catch(err){
+    console.log('获取detail为'+detail+'的详情页出错');
+    return {done:false,detail:detail};
+  }
   const $ = cheerio.load(res.text);
   const info = {
     isbn: '',
@@ -193,7 +240,7 @@ function* detailRequest(detail){
     pArr.push(aBook.eq(i).find('td').eq(3).text().trim());
   }
   info.place = pArr.toString();
-  return info;
+  return {done:true,info:info};
 }
 
 function* queryDouBan(arr){
@@ -238,12 +285,12 @@ function* doubanApi(isbn){
       pubdate: res.pubdate,
     }
   }catch(err){
-    console.log('查询isbn为'+isbn+'的图书发生错误');
+    console.log('在豆瓣查询isbn为'+isbn+'的图书发生错误');
     return {};
   }
 }
 
-// 处理书名，删掉不必要的字符，提高豆瓣搜索准确率
+// 处理书名，删掉不必要的字符
 function handleBook(bookname) {
   var temp = bookname.split('=')[0].trim();
   if (temp.lastIndexOf('.') === temp.length - 1 || temp.lastIndexOf('/') === temp.length - 1) {

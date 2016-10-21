@@ -3,6 +3,7 @@ const parse = require('co-body');
 const path = require('path');
 
 const Book = require('../models/book');
+const Keyword = require('../models/keyword');
 
 const bookSpider = require('../spider/book');
 
@@ -16,12 +17,13 @@ exports.library = function*(next) {
   const body = yield parse(this, {limit: '1kb'});
   if (body.keyword) {
     console.log('用户搜索关键字为:',body.keyword);
+    yield Keyword.updateCount(body.keyword);
 
     // 根据书名在本地数据查找，然后返回给请求方
     const localResult = yield Book.fuzzyName(body.keyword);
     this.status = 200;
     this.body = localResult;
-    
+
     // 根据书名去图书馆爬取书籍，然后与本地数据对比，把本地没有的存入数据库
     bookSpider(body.keyword);
   } else {
