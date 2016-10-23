@@ -1,7 +1,7 @@
 {
   "name": "tool-sets-server",
   "version": "0.1.0",
-  "description": "tool-sets项目的服务器端代码",
+  "description": "tool-sets项目的服务器端代码，使用Koa+MongoDB",
   "main": "app/index.js",
   "scripts": {
     "start": "node app/index.js"

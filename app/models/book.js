@@ -31,10 +31,16 @@ Book.statics.saves = function*(arr){
 }
 
 // 根据name进行模糊搜索
-Book.statics.fuzzyName = function*(keyword){
-  return yield this.find({ name: new RegExp(keyword,'i') });
+Book.statics.fuzzyName = function*(keyword,id,count){
+  // 每页的数量
+  count = (count && count > 0 && count < 101) ? count : 10;
+
+  const query = id ? { name: new RegExp(keyword,'i'),_id:{$gt:id} } : { name: new RegExp(keyword,'i') };
+  
+  return yield this.find(query).limit(count).sort({_id:1});
 }
 
+// 根据detail来查询
 Book.statics.findByDetail = function*(detail){
   return yield this.findOne({ detail: detail });
 }

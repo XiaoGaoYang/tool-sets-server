@@ -275,7 +275,16 @@ function* doubanApi(isbn){
   if(!isbn) return {};
   const url = 'https://api.douban.com/v2/book/isbn/' + isbn;
   try{
-    let res = yield superagent.get(url);
+    let res = yield superagent.get(url)
+      .set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+      .set('Accept-Encoding', 'gzip, deflate, sdch, br')
+      .set('Accept-Language', 'zh-CN,zh;q=0.8')
+      .set('Cache-Control', 'max-age=0')
+      .set('Connection', 'keep-alive')
+      .set('Cookie','bid=9qwCHiHryu0; __utma=30149280.717767427.1475419614.1475453505.1476969828.3; __utmz=30149280.1476969828.3.2.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); gr_user_id=122e2c4e-dbb9-46e9-9739-f4ada10efdf1; gr_session_id_22c937bbd8ebd703f2d8e9445f7dfd03=c9e3d2c9-03c8-4ded-8fbb-e0de88655a48; gr_cs1_c9e3d2c9-03c8-4ded-8fbb-e0de88655a48=user_id%3A0; _vwo_uuid_v2=ADC3DBEC0C3630BBE808BEAA8EA9B393|f3a416fa5282284e50e5a502ebb74989')
+      .set('Host', 'api.douban.com')
+      .set('Upgrade-Insecure-Requests', '1')
+      .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36');
     res = JSON.parse(res.text);
     return {
       cover: res.image,
@@ -286,6 +295,7 @@ function* doubanApi(isbn){
     }
   }catch(err){
     console.log('在豆瓣查询isbn为'+isbn+'的图书发生错误');
+    console.warn(err);
     return {};
   }
 }

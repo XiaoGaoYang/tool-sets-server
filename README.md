@@ -2,7 +2,7 @@
 
 `tool-sets`项目的服务器端代码，提供API供客户端调用
 
-采用`MongoDB`作为数据库
+后端语言为`Node.js`，使用`Koa`框架，采用`MongoDB`作为数据库
 
 # 图书馆书籍查询
 
@@ -20,23 +20,27 @@
 
 | 参数 | 意义 | 备注 |
 | ------ | ------ | ------ |
-| keyword | 搜索关键字 | 必填，为用户输入的书名 |  
+| keyword | 搜索关键字 | 必填，为用户输入的书名 |
+| lastId | 开始位置标记 | 选填，值为上一次返回结果中最后一个的_id属性 |
+| count | 返回数量 | 选填，默认返回10条，最大返回100条 |
 
 返回示例：
 ```javascript
 {
-  "totalPage": "30",
-  "currentPage": "1",
-  "bookList": [{
-    "name": "CSS商业网站布局之道",
-    "number": "TP393.092/Z-919.2",
-    "isbn": "9787302158103",
-    "detail": "0000430094",
-    "place": "南湖密集书库Ⅰ, 南湖密集书库Ⅰ, 南湖密集书库Ⅰ, 南湖密集书库Ⅰ, 文昌科技书阅览室",
-    "author": "朱印宏著",
-    "publiser": "清华大学出版社 2007",
-    "price": "75元",
-    "cover": "https://img3.doubanio.com/mpic/s3022312.jpg" // 当没有查到封面的时候没有该属性
+  "books": [{
+    "_id": "580a2435abb44614f023c032",
+    "detail": "0000739966",
+    "name": "Head First HTML与CSS.Head first HTML and CSS",
+    "author": "Elisabeth Robson, Eric Freeman著",
+    "publiser": "中国电力出版社 2013",
+    "number": "TP312HT/L-162",
+    "isbn": "9787512344778",
+    "place": "南湖科技书阅览室,南湖科技书阅览室,文昌科技书阅览室",
+    "cover": "https://img3.doubanio.com/mpic/s27104165.jpg",
+    "pages": "762",
+    "summary": "是不是已经厌倦了那些深奥的HTML书？",
+    "price": "98.00元",
+    "pubdate": "2013-9"
   }]
 }
 ```
